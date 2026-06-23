@@ -172,6 +172,41 @@
     }
 
     .footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .mini-hint { color: var(--muted); font-size: 13px; line-height: 1.55; margin-top: 10px; }
+
+    .alarm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(47, 42, 36, .32);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+    .alarm-overlay.show { display: flex; }
+    .alarm-box {
+      width: min(420px, 100%);
+      background: #fffaf2;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: 0 24px 80px rgba(47, 42, 36, .25);
+      padding: 24px;
+      text-align: center;
+      animation: pop .18s ease-out;
+    }
+    .alarm-box h2 { font-size: 28px; margin: 0 0 8px; }
+    .alarm-box p { margin-bottom: 18px; }
+    .pulse { animation: pulse 1s ease-in-out infinite; }
+
+    @keyframes pop {
+      from { transform: scale(.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(159, 79, 69, 0); }
+      50% { box-shadow: 0 0 0 8px rgba(159, 79, 69, .12); }
+    }
 
     @media (max-width: 860px) {
       body { padding: 14px; align-items: flex-start; }
@@ -233,10 +268,20 @@
 
       <div class="footer-actions">
         <button id="resetDayBtn" class="ghost">重置今日</button>
-        <button id="notifyBtn" class="ghost">开启提醒</button>
+        <button id="notifyBtn" class="ghost">开启声音 + 通知</button>
+        <button id="testAlarmBtn" class="ghost">测试提醒</button>
       </div>
+      <div class="mini-hint" id="reminderHint">提醒未开启：请点击“开启声音 + 通知”。浏览器标签页保持打开时，到点会响铃、弹窗、闪标题。</div>
     </aside>
   </main>
+
+  <div id="alarmOverlay" class="alarm-overlay" role="dialog" aria-modal="true" aria-labelledby="alarmTitle">
+    <div class="alarm-box">
+      <h2 id="alarmTitle">本轮完成</h2>
+      <p id="alarmBody">请回到 timer，看下一步。</p>
+      <button id="dismissAlarmBtn" class="ok">我知道了</button>
+    </div>
+  </div>
 
   <script>
     const MODES = {
@@ -257,7 +302,14 @@
       note: ''
     });
 
+    const reminderStorageKey = 'execution-timer:reminder-settings';
+    const defaultReminderSettings = () => ({ sound: false, notifications: false });
+
     let data = loadData();
+    let reminderSettings = loadReminderSettings();
+    let audioCtx = null;
+    let titleFlashId = null;
+    const originalTitle = document.title;
     let activeMode = null;
     let remaining = MODES.execute.minutes * 60;
     let duration = remaining;
@@ -279,6 +331,12 @@
     const cancelBtn = $('cancelBtn');
     const resetDayBtn = $('resetDayBtn');
     const notifyBtn = $('notifyBtn');
+    const testAlarmBtn = $('testAlarmBtn');
+    const reminderHint = $('reminderHint');
+    const alarmOverlay = $('alarmOverlay');
+    const alarmTitle = $('alarmTitle');
+    const alarmBody = $('alarmBody');
+    const dismissAlarmBtn = $('dismissAlarmBtn');
     const noteEl = $('note');
 
     function loadData() {
@@ -286,6 +344,17 @@
         const raw = localStorage.getItem(storageKey());
         return raw ? JSON.parse(raw) : defaultData();
       } catch { return defaultData(); }
+    }
+
+    function loadReminderSettings() {
+      try {
+        const raw = localStorage.getItem(reminderStorageKey);
+        return raw ? { ...defaultReminderSettings(), ...JSON.parse(raw) } : defaultReminderSettings();
+      } catch { return defaultReminderSettings(); }
+    }
+
+    function saveReminderSettings() {
+      localStorage.setItem(reminderStorageKey, JSON.stringify(reminderSettings));
     }
 
     function saveData() {
@@ -314,6 +383,7 @@
     }
 
     function startMode(mode) {
+      if (reminderSettings.sound) unlockAudio();
       if (!canStart(mode)) {
         if (MODES[mode].type === 'support') setMessage('现在先不要继续整理/探索了，下一步请做 Execute 25。');
         if (mode === 'deep') setMessage('Deep Execute 建议在至少完成一个 Execute 之后再用。');
@@ -361,7 +431,7 @@
       }
       saveData();
       render();
-      notify(`${finishedLabel} 完成`, finishedType === 'support' ? '下一步：Execute 25。' : '执行块已记录。');
+      showAlarm(`${finishedLabel} 完成`, finishedType === 'support' ? '下一步：Execute 25。' : '执行块已记录。');
     }
 
     function record(mode, sec) {
@@ -445,10 +515,90 @@
       return str.replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
     }
 
+    async function unlockAudio() {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return false;
+        if (!audioCtx) audioCtx = new Ctx();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        return true;
+      } catch { return false; }
+    }
+
+    function beepOnce(startTime, frequency = 880, durationMs = 180) {
+      if (!audioCtx) return;
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.0001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + durationMs / 1000);
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + durationMs / 1000 + 0.02);
+    }
+
+    async function playAlarmSound() {
+      if (!reminderSettings.sound) return;
+      const ok = await unlockAudio();
+      if (!ok || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      // 两短一长，重复两次：足够明显，但不刺耳。
+      beepOnce(now, 880, 150);
+      beepOnce(now + 0.28, 880, 150);
+      beepOnce(now + 0.62, 660, 360);
+      beepOnce(now + 1.28, 880, 150);
+      beepOnce(now + 1.56, 880, 150);
+      beepOnce(now + 1.90, 660, 420);
+    }
+
+    function startTitleFlash(title) {
+      stopTitleFlash();
+      let on = false;
+      titleFlashId = setInterval(() => {
+        on = !on;
+        document.title = on ? `⏰ ${title}` : originalTitle;
+      }, 800);
+    }
+
+    function stopTitleFlash() {
+      if (titleFlashId) clearInterval(titleFlashId);
+      titleFlashId = null;
+      document.title = originalTitle;
+    }
+
+    function showAlarm(title, body) {
+      alarmTitle.textContent = title;
+      alarmBody.textContent = body;
+      alarmOverlay.classList.add('show');
+      document.querySelector('.timer')?.classList.add('pulse');
+      startTitleFlash(title);
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+      notify(title, body);
+      playAlarmSound();
+    }
+
+    function dismissAlarm() {
+      alarmOverlay.classList.remove('show');
+      document.querySelector('.timer')?.classList.remove('pulse');
+      stopTitleFlash();
+    }
+
     function notify(title, body) {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body });
+      if (reminderSettings.notifications && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, requireInteraction: true });
       }
+    }
+
+    function renderReminderState() {
+      const n = reminderSettings.notifications && (!('Notification' in window) || Notification.permission === 'granted');
+      const s = reminderSettings.sound;
+      notifyBtn.textContent = (s || n) ? '提醒已开启' : '开启声音 + 通知';
+      reminderHint.textContent = (s || n)
+        ? '提醒已开启：到点会响铃、弹窗、闪标题。请保持这个页面打开。'
+        : '提醒未开启：请点击“开启声音 + 通知”。浏览器标签页保持打开时，到点会响铃、弹窗、闪标题。';
     }
 
     planBtn.addEventListener('click', () => startMode('plan'));
@@ -468,12 +618,34 @@
       }
     });
     notifyBtn.addEventListener('click', async () => {
-      if (!('Notification' in window)) return setMessage('这个浏览器不支持通知。');
-      const result = await Notification.requestPermission();
-      setMessage(result === 'granted' ? '提醒已开启。' : '提醒没有开启。');
+      const audioReady = await unlockAudio();
+      reminderSettings.sound = audioReady;
+
+      if ('Notification' in window) {
+        const result = Notification.permission === 'granted'
+          ? 'granted'
+          : await Notification.requestPermission();
+        reminderSettings.notifications = result === 'granted';
+      }
+
+      saveReminderSettings();
+      renderReminderState();
+      setMessage(reminderSettings.sound || reminderSettings.notifications ? '提醒已开启。可以点“测试提醒”确认声音。' : '提醒没有开启，请检查浏览器权限。');
     });
+
+    testAlarmBtn.addEventListener('click', () => {
+      if (reminderSettings.sound) unlockAudio();
+      showAlarm('测试提醒', '如果你听到声音、看到弹窗和标题闪烁，提醒就可以用了。');
+    });
+
+    dismissAlarmBtn.addEventListener('click', dismissAlarm);
+    alarmOverlay.addEventListener('click', (event) => {
+      if (event.target === alarmOverlay) dismissAlarm();
+    });
+
     noteEl.value = data.note || '';
     noteEl.addEventListener('input', saveData);
+    renderReminderState();
     render();
   </script>
 </body>
