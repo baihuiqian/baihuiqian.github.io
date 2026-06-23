@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>25/15 Execution Timer</title>
+  <style>
+    :root {
+      --bg: #f7f3eb;
+      --card: #fffaf2;
+      --ink: #2f2a24;
+      --muted: #7b7064;
+      --line: #e6dccd;
+      --accent: #8f6f4e;
+      --accent2: #b58b61;
+      --danger: #9f4f45;
+      --ok: #597a55;
+      --shadow: 0 18px 50px rgba(75, 55, 34, .11);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #fff7e8 0, transparent 34%), var(--bg);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 22px;
+    }
+
+    .card {
+      background: rgba(255, 250, 242, .9);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 { margin: 0 0 8px; font-size: clamp(26px, 4vw, 42px); letter-spacing: -0.04em; }
+    h2 { margin: 0 0 14px; font-size: 18px; }
+    p { color: var(--muted); line-height: 1.6; margin: 8px 0; }
+
+    .timer {
+      margin: 22px 0 16px;
+      text-align: center;
+      padding: 26px 18px;
+      border-radius: 22px;
+      background: #fffdf8;
+      border: 1px solid var(--line);
+    }
+
+    .mode-label { color: var(--muted); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+    .time {
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(68px, 12vw, 112px);
+      font-weight: 800;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      margin: 10px 0 12px;
+    }
+
+    .message {
+      min-height: 28px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 18px;
+      padding: 16px 14px;
+      cursor: pointer;
+      color: white;
+      background: var(--accent);
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 8px 18px rgba(70, 46, 27, .14);
+      transition: transform .12s ease, opacity .12s ease, filter .12s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.02); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+    button.secondary { background: #d5c4ad; color: #3d342b; }
+    button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); box-shadow: none; }
+    button.danger { background: var(--danger); }
+    button.ok { background: var(--ok); }
+
+    .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+
+    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fffdf8;
+    }
+    .stat .num { font-size: 28px; font-weight: 900; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+    .stat .label { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+    .status {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      font-weight: 750;
+      line-height: 1.6;
+    }
+    .status.ok-text { color: var(--ok); }
+    .status.need-text { color: var(--danger); }
+
+    .note {
+      width: 100%;
+      min-height: 100px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      border-radius: 18px;
+      padding: 14px;
+      font: inherit;
+      color: var(--ink);
+      outline: none;
+      margin-top: 8px;
+    }
+
+    .log {
+      max-height: 230px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+    .log-item {
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .log-item strong { color: var(--ink); }
+
+    .rules {
+      margin-top: 16px;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+    @media (max-width: 860px) {
+      body { padding: 14px; align-items: flex-start; }
+      .app { grid-template-columns: 1fr; }
+      .grid, .stats { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="card">
+      <h1>25/15 Execution Timer</h1>
+      <p>核心规则：Plan / Inbox 和 Explore / Spike 是辅助，不能连续吞掉执行。每完成一次 15 分钟辅助块，下一步必须回到执行。</p>
+
+      <div class="timer" aria-live="polite">
+        <div class="mode-label" id="modeLabel">Ready</div>
+        <div class="time" id="timeDisplay">25:00</div>
+        <div class="message" id="message">选择一个模式开始。</div>
+      </div>
+
+      <div class="grid">
+        <button id="planBtn">Plan / Inbox · 15</button>
+        <button id="exploreBtn">Explore / Spike · 15</button>
+        <button id="executeBtn" class="ok">Execute · 25</button>
+        <button id="deepBtn" class="secondary">Deep Execute · 50</button>
+      </div>
+
+      <div class="controls">
+        <button id="pauseBtn" class="ghost" disabled>暂停</button>
+        <button id="finishBtn" class="ghost" disabled>结束并记录</button>
+        <button id="cancelBtn" class="danger" disabled>取消本轮</button>
+      </div>
+
+      <h2 style="margin-top:22px;">当前任务 / Spike 问题</h2>
+      <textarea id="note" class="note" placeholder="例如：财务工作 — 是否需要 vibe code 一个 25/15 timer？"></textarea>
+    </section>
+
+    <aside class="card">
+      <h2>今日统计</h2>
+      <div class="stats">
+        <div class="stat"><div class="num" id="execTotal">0</div><div class="label">Execute min</div></div>
+        <div class="stat"><div class="num" id="supportTotal">0</div><div class="label">Plan + Explore min</div></div>
+        <div class="stat"><div class="num" id="planTotal">0</div><div class="label">Plan / Inbox min</div></div>
+        <div class="stat"><div class="num" id="exploreTotal">0</div><div class="label">Explore / Spike min</div></div>
+      </div>
+
+      <div id="status" class="status ok-text">状态：可以开始。建议先 Plan 15，或者直接 Execute 25。</div>
+
+      <ul class="rules">
+        <li>Plan / Inbox：15 min 上限。</li>
+        <li>Execute：25 min 最小执行单位。</li>
+        <li>Deep Execute：50 min，只在已经进入状态后使用。</li>
+        <li>Explore / Spike：15 min，用于处理执行中冒出的探索 / 决策问题。</li>
+      </ul>
+
+      <h2 style="margin-top:18px;">今日记录</h2>
+      <div class="log" id="log"></div>
+
+      <div class="footer-actions">
+        <button id="resetDayBtn" class="ghost">重置今日</button>
+        <button id="notifyBtn" class="ghost">开启提醒</button>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const MODES = {
+      plan: { label: 'Plan / Inbox', minutes: 15, type: 'support' },
+      explore: { label: 'Explore / Spike', minutes: 15, type: 'support' },
+      execute: { label: 'Execute', minutes: 25, type: 'execute' },
+      deep: { label: 'Deep Execute', minutes: 50, type: 'execute' },
+    };
+
+    const todayKey = () => new Date().toISOString().slice(0, 10);
+    const storageKey = () => `execution-timer:${todayKey()}`;
+
+    const defaultData = () => ({
+      date: todayKey(),
+      totals: { plan: 0, explore: 0, execute: 0, deep: 0 },
+      log: [],
+      needsExecute: false,
+      note: ''
+    });
+
+    let data = loadData();
+    let activeMode = null;
+    let remaining = MODES.execute.minutes * 60;
+    let duration = remaining;
+    let startedAt = null;
+    let intervalId = null;
+    let paused = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    const modeLabel = $('modeLabel');
+    const timeDisplay = $('timeDisplay');
+    const message = $('message');
+    const planBtn = $('planBtn');
+    const exploreBtn = $('exploreBtn');
+    const executeBtn = $('executeBtn');
+    const deepBtn = $('deepBtn');
+    const pauseBtn = $('pauseBtn');
+    const finishBtn = $('finishBtn');
+    const cancelBtn = $('cancelBtn');
+    const resetDayBtn = $('resetDayBtn');
+    const notifyBtn = $('notifyBtn');
+    const noteEl = $('note');
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(storageKey());
+        return raw ? JSON.parse(raw) : defaultData();
+      } catch { return defaultData(); }
+    }
+
+    function saveData() {
+      data.note = noteEl.value;
+      localStorage.setItem(storageKey(), JSON.stringify(data));
+    }
+
+    function fmt(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = Math.floor(sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function minutes(sec) { return Math.round(sec / 60); }
+
+    function executeSeconds() { return data.totals.execute + data.totals.deep; }
+    function supportSeconds() { return data.totals.plan + data.totals.explore; }
+
+    function canStart(mode) {
+      if (activeMode) return false;
+      const m = MODES[mode];
+      if (m.type === 'support' && data.needsExecute) return false;
+      if (m.type === 'support' && supportSeconds() > 0 && supportSeconds() >= executeSeconds()) return false;
+      if (mode === 'deep' && executeSeconds() === 0) return false;
+      return true;
+    }
+
+    function startMode(mode) {
+      if (!canStart(mode)) {
+        if (MODES[mode].type === 'support') setMessage('现在先不要继续整理/探索了，下一步请做 Execute 25。');
+        if (mode === 'deep') setMessage('Deep Execute 建议在至少完成一个 Execute 之后再用。');
+        return;
+      }
+      activeMode = mode;
+      duration = MODES[mode].minutes * 60;
+      remaining = duration;
+      startedAt = Date.now();
+      paused = false;
+      modeLabel.textContent = MODES[mode].label;
+      setMessage(mode === 'explore' ? '15 分钟内只做决策，不展开成新项目。' : '开始。');
+      tick();
+      intervalId = setInterval(tick, 250);
+      render();
+    }
+
+    function tick() {
+      if (!activeMode || paused) return;
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      remaining = Math.max(0, duration - elapsed);
+      timeDisplay.textContent = fmt(remaining);
+      if (remaining <= 0) finishMode(true);
+    }
+
+    function finishMode(auto = false) {
+      if (!activeMode) return;
+      clearInterval(intervalId);
+      intervalId = null;
+      const elapsed = auto ? duration : Math.max(60, duration - remaining);
+      record(activeMode, elapsed);
+      const finishedLabel = MODES[activeMode].label;
+      const finishedType = MODES[activeMode].type;
+      activeMode = null;
+      remaining = MODES.execute.minutes * 60;
+      duration = remaining;
+      modeLabel.textContent = 'Ready';
+      timeDisplay.textContent = fmt(remaining);
+      if (finishedType === 'support') {
+        data.needsExecute = true;
+        setMessage(`${finishedLabel} 完成。下一步：Execute 25。`);
+      } else {
+        data.needsExecute = false;
+        setMessage(`${finishedLabel} 完成。可以继续执行，或短暂整理。`);
+      }
+      saveData();
+      render();
+      notify(`${finishedLabel} 完成`, finishedType === 'support' ? '下一步：Execute 25。' : '执行块已记录。');
+    }
+
+    function record(mode, sec) {
+      data.totals[mode] += sec;
+      data.log.unshift({
+        at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        mode,
+        seconds: sec,
+        note: noteEl.value.trim()
+      });
+      data.log = data.log.slice(0, 30);
+    }
+
+    function cancelMode() {
+      if (!activeMode) return;
+      clearInterval(intervalId);
+      intervalId = null;
+      activeMode = null;
+      remaining = MODES.execute.minutes * 60;
+      duration = remaining;
+      modeLabel.textContent = 'Ready';
+      timeDisplay.textContent = fmt(remaining);
+      setMessage('本轮已取消，没有记录时间。');
+      render();
+    }
+
+    function togglePause() {
+      if (!activeMode) return;
+      if (!paused) {
+        paused = true;
+        remaining = Math.max(0, duration - Math.floor((Date.now() - startedAt) / 1000));
+        pauseBtn.textContent = '继续';
+        setMessage('已暂停。');
+      } else {
+        paused = false;
+        duration = remaining;
+        startedAt = Date.now();
+        pauseBtn.textContent = '暂停';
+        setMessage('继续。');
+      }
+      render();
+    }
+
+    function setMessage(text) { message.textContent = text; }
+
+    function render() {
+      $('execTotal').textContent = minutes(executeSeconds());
+      $('supportTotal').textContent = minutes(supportSeconds());
+      $('planTotal').textContent = minutes(data.totals.plan);
+      $('exploreTotal').textContent = minutes(data.totals.explore);
+
+      const status = $('status');
+      const exec = executeSeconds();
+      const sup = supportSeconds();
+      if (data.needsExecute || (sup > 0 && sup >= exec)) {
+        status.className = 'status need-text';
+        status.textContent = '状态：需要执行。先做一个 Execute 25，再继续 Plan / Explore。';
+      } else {
+        status.className = 'status ok-text';
+        status.textContent = '状态：比例健康。可以执行，也可以短暂 Plan / Explore。';
+      }
+
+      planBtn.disabled = !canStart('plan');
+      exploreBtn.disabled = !canStart('explore');
+      executeBtn.disabled = !canStart('execute');
+      deepBtn.disabled = !canStart('deep');
+      pauseBtn.disabled = !activeMode;
+      finishBtn.disabled = !activeMode;
+      cancelBtn.disabled = !activeMode;
+      pauseBtn.textContent = paused ? '继续' : '暂停';
+
+      $('log').innerHTML = data.log.length ? data.log.map(item => {
+        const label = MODES[item.mode].label;
+        const mins = minutes(item.seconds);
+        const note = item.note ? ` · ${escapeHtml(item.note).slice(0, 60)}` : '';
+        return `<div class="log-item"><span><strong>${label}</strong>${note}</span><span>${item.at} · ${mins}m</span></div>`;
+      }).join('') : '<p>今天还没有记录。</p>';
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+    }
+
+    function notify(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body });
+      }
+    }
+
+    planBtn.addEventListener('click', () => startMode('plan'));
+    exploreBtn.addEventListener('click', () => startMode('explore'));
+    executeBtn.addEventListener('click', () => startMode('execute'));
+    deepBtn.addEventListener('click', () => startMode('deep'));
+    pauseBtn.addEventListener('click', togglePause);
+    finishBtn.addEventListener('click', () => finishMode(false));
+    cancelBtn.addEventListener('click', cancelMode);
+    resetDayBtn.addEventListener('click', () => {
+      if (confirm('确定重置今日记录吗？')) {
+        data = defaultData();
+        noteEl.value = '';
+        saveData();
+        setMessage('今日已重置。');
+        render();
+      }
+    });
+    notifyBtn.addEventListener('click', async () => {
+      if (!('Notification' in window)) return setMessage('这个浏览器不支持通知。');
+      const result = await Notification.requestPermission();
+      setMessage(result === 'granted' ? '提醒已开启。' : '提醒没有开启。');
+    });
+    noteEl.value = data.note || '';
+    noteEl.addEventListener('input', saveData);
+    render();
+  </script>
+</body>
+</html>
