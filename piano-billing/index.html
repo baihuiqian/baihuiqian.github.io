@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>华丽音乐 · 收费记录</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+    background: #f5f5f0;
+    color: #1a1a18;
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* Header */
+  .header {
+    background: #fff;
+    border-bottom: 0.5px solid #e0ddd6;
+    padding: 16px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .header-title { font-size: 17px; font-weight: 600; color: #1a1a18; }
+  .header-sub { font-size: 12px; color: #999; margin-top: 2px; }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex;
+    gap: 0;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #888;
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s;
+  }
+  .tab.active {
+    color: #1a1a18;
+    font-weight: 500;
+    border-bottom-color: #1a1a18;
+  }
+
+  /* Sections */
+  .section { display: none; padding: 16px; }
+  .section.active { display: block; }
+
+  /* Card */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 0.5px solid #e8e5de;
+  }
+
+  /* Form */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  .field input, .field select {
+    width: 100%;
+    height: 44px;
+    border: 0.5px solid #ddd;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 15px;
+    color: #1a1a18;
+    background: #fafaf8;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    font-family: inherit;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .field input:focus, .field select:focus {
+    border-color: #1a1a18;
+    background: #fff;
+  }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Status toggle */
+  .status-toggle {
+    display: flex;
+    border: 0.5px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .status-toggle button {
+    flex: 1;
+    height: 44px;
+    border: none;
+    background: #fafaf8;
+    font-size: 14px;
+    color: #888;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .status-toggle button.active-paid {
+    background: #e8f5ee;
+    color: #1a7a45;
+    font-weight: 500;
+  }
+  .status-toggle button.active-unpaid {
+    background: #fde8e8;
+    color: #c0392b;
+    font-weight: 500;
+  }
+
+  /* Primary button */
+  .btn-save {
+    width: 100%;
+    height: 50px;
+    background: #1a1a18;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 4px;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .btn-save:active { opacity: 0.8; }
+
+  /* Filter chips */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    border: 0.5px solid #ddd;
+    background: #fff;
+    color: #666;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .chip.active {
+    background: #1a1a18;
+    color: #fff;
+    border-color: #1a1a18;
+  }
+
+  /* Record card */
+  .rec-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e8e5de;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .rec-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 14px 14px 10px;
+  }
+  .rec-name { font-size: 16px; font-weight: 500; color: #1a1a18; }
+  .rec-meta { font-size: 13px; color: #999; margin-top: 3px; }
+  .rec-amount { font-size: 18px; font-weight: 600; }
+  .rec-amount.paid { color: #1a7a45; }
+  .rec-amount.unpaid { color: #c0392b; }
+  .rec-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-top: 0.5px solid #f0ede6;
+    background: #fafaf8;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+  }
+  .badge.paid { background: #e8f5ee; color: #1a7a45; }
+  .badge.unpaid { background: #fde8e8; color: #c0392b; }
+  .btn-del {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  .btn-del:active { color: #e74c3c; }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 48px 0 32px;
+    color: #bbb;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* Stats */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stat {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e8e5de;
+    padding: 14px;
+  }
+  .stat-label { font-size: 12px; color: #999; margin-bottom: 6px; }
+  .stat-val { font-size: 22px; font-weight: 600; color: #1a1a18; }
+  .stat-val.green { color: #1a7a45; }
+  .stat-val.red { color: #c0392b; }
+
+  /* Month rows */
+  .month-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 0.5px solid #f0ede6;
+  }
+  .month-item:last-child { border-bottom: none; }
+  .month-label { font-size: 14px; color: #1a1a18; }
+  .month-count { font-size: 12px; color: #bbb; }
+  .month-val { font-size: 15px; font-weight: 500; color: #1a7a45; }
+
+  /* Section heading */
+  .sec-label {
+    font-size: 11px;
+    color: #bbb;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+
+  /* Export button */
+  .btn-export {
+    width: 100%;
+    height: 44px;
+    background: #fff;
+    color: #1a1a18;
+    border: 0.5px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 4px;
+    font-family: inherit;
+  }
+  .btn-export:active { background: #f5f5f0; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(26,26,24,0.9);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="header-title">华丽音乐 · 收费记录</div>
+      <div class="header-sub" id="header-sub">载入中…</div>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('add')">＋ 记录收费</button>
+    <button class="tab" onclick="switchTab('list')">收费记录</button>
+    <button class="tab" onclick="switchTab('summary')">月度汇总</button>
+  </div>
+</div>
+
+<!-- 记录收费 -->
+<div id="tab-add" class="section active">
+  <div class="card">
+    <div class="field">
+      <label>学生姓名</label>
+      <input type="text" id="inp-name" list="students-list" placeholder="输入或选择学生姓名" autocomplete="off" />
+      <datalist id="students-list"></datalist>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>金额（元）</label>
+        <input type="number" id="inp-amount" placeholder="0" min="0" inputmode="numeric" />
+      </div>
+      <div class="field">
+        <label>课时数</label>
+        <input type="number" id="inp-lessons" placeholder="0" min="0" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>课程类型</label>
+        <select id="inp-type">
+          <option value="启蒙">启蒙</option>
+          <option value="钢琴考级">钢琴考级</option>
+          <option value="听力">听力</option>
+          <option value="声乐">声乐</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>日期</label>
+        <input type="date" id="inp-date" />
+      </div>
+    </div>
+    <div class="field">
+      <label>付款状态</label>
+      <div class="status-toggle">
+        <button id="btn-paid" class="active-paid" onclick="setStatus('paid')">已付款</button>
+        <button id="btn-unpaid" onclick="setStatus('unpaid')">未付款</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>备注（可选）</label>
+      <input type="text" id="inp-note" placeholder="补充说明，如考级等级等" />
+    </div>
+    <button class="btn-save" onclick="addRecord()">保存记录</button>
+  </div>
+</div>
+
+<!-- 收费记录 -->
+<div id="tab-list" class="section">
+  <div class="filter-bar" id="filter-bar">
+    <button class="chip active" onclick="setFilter('all',this)">全部</button>
+    <button class="chip" onclick="setFilter('unpaid',this)">未付款</button>
+    <button class="chip" onclick="setFilter('paid',this)">已付款</button>
+  </div>
+  <div id="records-container"></div>
+</div>
+
+<!-- 月度汇总 -->
+<div id="tab-summary" class="section">
+  <div class="stat-grid" id="stats-grid"></div>
+  <div class="sec-label">月度收入明细</div>
+  <div class="card" style="padding: 4px 16px;">
+    <div id="month-breakdown"></div>
+  </div>
+  <button class="btn-export" onclick="exportCSV()">导出 CSV 表格</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STUDENTS = ['柏艺凡','胡妙熙','陈蔓妮','郭赫伦','余溢','徐梓轩','李雨珊','陈思涵','陈睿哲','蔡林汐','朱启蒙','宋安琳','廖治涵','杨子玥','翟趣','范煜煊','胡文瑄','胡若涵','经济铭','徐子雯','余沛鑫','胡瑞','赵国淇','柏瑞','汪厚诚','韦喻方','刘林城','詹萌雅','施云舒','张沐卿','何梓玉'];
+const KEY = 'hlmusic_billing_v1';
+let records = [];
+let activeFilter = 'all';
+let activeStatus = 'paid';
+
+function load() {
+  try { records = JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { records = []; }
+  populateStudents();
+  updateHeaderSub();
+  renderList();
+  renderSummary();
+}
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(records));
+  updateHeaderSub();
+}
+
+function updateHeaderSub() {
+  const unpaid = records.filter(r => r.status === 'unpaid');
+  const total = records.reduce((s,r) => r.status==='paid' ? s+r.amount : s, 0);
+  document.getElementById('header-sub').textContent =
+    `共 ${records.length} 条 · 已收 ¥${total.toLocaleString()}${unpaid.length ? ' · 未付 '+unpaid.length+'人次' : ''}`;
+}
+
+function populateStudents() {
+  const names = [...new Set([...STUDENTS, ...records.map(r => r.name)])].sort();
+  document.getElementById('students-list').innerHTML = names.map(n => `<option value="${n}">`).join('');
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+document.getElementById('inp-date').value = today();
+
+function setStatus(s) {
+  activeStatus = s;
+  document.getElementById('btn-paid').className = s === 'paid' ? 'active-paid' : '';
+  document.getElementById('btn-unpaid').className = s === 'unpaid' ? 'active-unpaid' : '';
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['add','list','summary'][i] === id);
+  });
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if (id === 'list') renderList();
+  if (id === 'summary') renderSummary();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function addRecord() {
+  const name = document.getElementById('inp-name').value.trim();
+  const amount = parseFloat(document.getElementById('inp-amount').value);
+  const date = document.getElementById('inp-date').value;
+  const type = document.getElementById('inp-type').value;
+  const lessons = parseInt(document.getElementById('inp-lessons').value) || 0;
+  const note = document.getElementById('inp-note').value.trim();
+
+  if (!name) { showToast('请输入学生姓名'); return; }
+  if (!amount || amount <= 0) { showToast('请输入有效金额'); return; }
+  if (!date) { showToast('请选择日期'); return; }
+
+  records.unshift({ id: Date.now(), name, amount, date, type, lessons, status: activeStatus, note });
+  save();
+  populateStudents();
+
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-amount').value = '';
+  document.getElementById('inp-lessons').value = '';
+  document.getElementById('inp-note').value = '';
+  document.getElementById('inp-date').value = today();
+  setStatus('paid');
+
+  showToast('记录已保存 ✓');
+}
+
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+
+function toggleStatus(id) {
+  const r = records.find(r => r.id === id);
+  if (r) { r.status = r.status === 'paid' ? 'unpaid' : 'paid'; save(); renderList(); renderSummary(); }
+}
+
+function deleteRecord(id) {
+  if (!confirm('确定删除这条记录？')) return;
+  records = records.filter(r => r.id !== id);
+  save();
+  renderList();
+  renderSummary();
+}
+
+function fmtDate(d) {
+  const [y,m,day] = d.split('-');
+  return `${parseInt(m)}月${parseInt(day)}日`;
+}
+
+function renderList() {
+  const container = document.getElementById('records-container');
+  let list = activeFilter === 'all' ? records : records.filter(r => r.status === activeFilter);
+
+  if (!list.length) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">${activeFilter==='unpaid'?'暂无欠费记录':'暂无记录'}</div></div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(r => `
+    <div class="rec-card">
+      <div class="rec-main">
+        <div>
+          <div class="rec-name">${r.name}</div>
+          <div class="rec-meta">${fmtDate(r.date)} · ${r.type}${r.lessons ? ' · '+r.lessons+'课时' : ''}${r.note ? ' · '+r.note : ''}</div>
+        </div>
+        <div class="rec-amount ${r.status}">¥${r.amount.toLocaleString()}</div>
+      </div>
+      <div class="rec-footer">
+        <button class="badge ${r.status}" onclick="toggleStatus(${r.id})">${r.status==='paid'?'✓ 已付款':'⚠ 未付款'} 点击切换</button>
+        <button class="btn-del" onclick="deleteRecord(${r.id})">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderSummary() {
+  const paid = records.filter(r => r.status === 'paid');
+  const unpaid = records.filter(r => r.status === 'unpaid');
+  const totalPaid = paid.reduce((s,r) => s+r.amount, 0);
+  const totalUnpaid = unpaid.reduce((s,r) => s+r.amount, 0);
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat"><div class="stat-label">已收总额</div><div class="stat-val green">¥${totalPaid.toLocaleString()}</div></div>
+    <div class="stat"><div class="stat-label">待收总额</div><div class="stat-val red">¥${totalUnpaid.toLocaleString()}</div></div>
+    <div class="stat"><div class="stat-label">记录总数</div><div class="stat-val">${records.length} 条</div></div>
+    <div class="stat"><div class="stat-label">未付学生</div><div class="stat-val">${new Set(unpaid.map(r=>r.name)).size} 人</div></div>
+  `;
+
+  const byMonth = {};
+  paid.forEach(r => {
+    const m = r.date.substring(0,7);
+    if (!byMonth[m]) byMonth[m] = { total: 0, count: 0 };
+    byMonth[m].total += r.amount;
+    byMonth[m].count++;
+  });
+
+  const keys = Object.keys(byMonth).sort().reverse();
+  const el = document.getElementById('month-breakdown');
+  if (!keys.length) {
+    el.innerHTML = '<div style="padding:20px 0;text-align:center;color:#bbb;font-size:14px">暂无已收款记录</div>';
+    return;
+  }
+  el.innerHTML = keys.map(k => {
+    const [y,m] = k.split('-');
+    return `<div class="month-item">
+      <div><div class="month-label">${y}年${parseInt(m)}月</div><div class="month-count">${byMonth[k].count} 笔</div></div>
+      <div class="month-val">¥${byMonth[k].total.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+  if (!records.length) { showToast('暂无数据可导出'); return; }
+  const header = '学生姓名,金额,日期,课程类型,课时数,状态,备注';
+  const rows = records.map(r =>
+    [r.name, r.amount, r.date, r.type, r.lessons||'', r.status==='paid'?'已付款':'未付款', r.note||''].join(',')
+  );
+  const csv = '\uFEFF' + [header, ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `华丽音乐收费记录_${today()}.csv`;
+  a.click();
+  showToast('导出成功');
+}
+
+load();
+</script>
+</body>
+</html>
