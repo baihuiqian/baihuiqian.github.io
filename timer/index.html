@@ -220,7 +220,7 @@
   <main class="app">
     <section class="card">
       <h1>25/15 Execution Timer</h1>
-      <p>核心规则：Plan / Inbox 和 Explore / Spike 是辅助，不能连续吞掉执行。每完成一次 15 分钟辅助块，下一步必须回到执行。</p>
+      <p>自由模式：四个类别随时可以切换开始。统计面板会追踪计划 vs 执行的时间比例，供自己参考。</p>
 
       <div class="timer" aria-live="polite">
         <div class="mode-label" id="modeLabel">Ready</div>
@@ -375,20 +375,12 @@
 
     function canStart(mode) {
       if (activeMode) return false;
-      const m = MODES[mode];
-      if (m.type === 'support' && data.needsExecute) return false;
-      if (m.type === 'support' && supportSeconds() > 0 && supportSeconds() >= executeSeconds()) return false;
-      if (mode === 'deep' && executeSeconds() === 0) return false;
       return true;
     }
 
     function startMode(mode) {
       if (reminderSettings.sound) unlockAudio();
-      if (!canStart(mode)) {
-        if (MODES[mode].type === 'support') setMessage('现在先不要继续整理/探索了，下一步请做 Execute 25。');
-        if (mode === 'deep') setMessage('Deep Execute 建议在至少完成一个 Execute 之后再用。');
-        return;
-      }
+      if (!canStart(mode)) return;
       activeMode = mode;
       duration = MODES[mode].minutes * 60;
       remaining = duration;
@@ -423,15 +415,13 @@
       modeLabel.textContent = 'Ready';
       timeDisplay.textContent = fmt(remaining);
       if (finishedType === 'support') {
-        data.needsExecute = true;
-        setMessage(`${finishedLabel} 完成。下一步：Execute 25。`);
+        setMessage(`${finishedLabel} 完成。可以继续任意模式。`);
       } else {
-        data.needsExecute = false;
         setMessage(`${finishedLabel} 完成。可以继续执行，或短暂整理。`);
       }
       saveData();
       render();
-      showAlarm(`${finishedLabel} 完成`, finishedType === 'support' ? '下一步：Execute 25。' : '执行块已记录。');
+      showAlarm(`${finishedLabel} 完成`, finishedType === 'support' ? '可以继续任意模式。' : '执行块已记录。');
     }
 
     function record(mode, sec) {
@@ -486,12 +476,12 @@
       const status = $('status');
       const exec = executeSeconds();
       const sup = supportSeconds();
-      if (data.needsExecute || (sup > 0 && sup >= exec)) {
+      if (sup > 0 && sup >= exec) {
         status.className = 'status need-text';
-        status.textContent = '状态：需要执行。先做一个 Execute 25，再继续 Plan / Explore。';
+        status.textContent = '状态：计划 ≥ 执行，建议回到执行。';
       } else {
         status.className = 'status ok-text';
-        status.textContent = '状态：比例健康。可以执行，也可以短暂 Plan / Explore。';
+        status.textContent = '状态：比例健康。可以自由选择任意模式。';
       }
 
       planBtn.disabled = !canStart('plan');
