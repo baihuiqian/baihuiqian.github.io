@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="家务合伙人"/>
+<meta name="theme-color" content="#1a1a2e"/>
+<title>家务合伙人</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'PingFang SC', 'Noto Sans SC', sans-serif; background: #F2F4F8; min-height: 100vh; display: flex; justify-content: center; }
+  #app { width: 100%; max-width: 480px; min-height: 100vh; position: relative; }
+  button { cursor: pointer; font-family: inherit; }
+  input { font-family: inherit; }
+
+  /* Welcome */
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 24px; }
+  .welcome-logo { font-size: 56px; margin-bottom: 16px; }
+  .welcome-title { font-size: 24px; font-weight: 800; color: #1a1a2e; margin-bottom: 8px; }
+  .welcome-sub { font-size: 14px; color: #888; margin-bottom: 40px; text-align: center; line-height: 1.6; }
+  .room-card { background: white; border-radius: 24px; padding: 28px 24px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .room-card-title { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+  .room-card-sub { font-size: 12px; color: #aaa; margin-bottom: 18px; }
+  .field-label { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 6px; }
+  .field-wrap { position: relative; margin-bottom: 14px; }
+  .field-input { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 13px 16px; font-size: 15px; color: #1a1a2e; outline: none; transition: border-color 0.2s; background: white; }
+  .field-input:focus { border-color: #4F8EF7; }
+  .field-input::placeholder { color: #bbb; font-size: 14px; }
+  .field-input.error { border-color: #ef4444; }
+  .field-error { font-size: 11px; color: #ef4444; margin-top: 4px; }
+  .pw-toggle { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #aaa; font-size: 16px; padding: 4px; }
+  .main-btn { width: 100%; background: #1a1a2e; color: white; border: none; border-radius: 12px; padding: 14px 0; font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .main-btn:active { opacity: 0.85; }
+  .divider { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+  .divider-line { flex: 1; height: 1px; background: #eee; }
+  .divider-text { font-size: 12px; color: #bbb; }
+  .secondary-btn { width: 100%; background: #f0f4ff; color: #4F8EF7; border: none; border-radius: 12px; padding: 13px 0; font-size: 14px; font-weight: 600; }
+  .hint-text { font-size: 11px; color: #bbb; text-align: center; margin-top: 14px; line-height: 1.6; }
+  .url-banner { background: #f0f4ff; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .url-banner-label { font-size: 11px; color: #4F8EF7; font-weight: 600; }
+  .url-banner-code { font-size: 14px; font-weight: 700; color: #1a1a2e; letter-spacing: 1px; }
+
+  /* Step indicator */
+  .steps { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+  .step { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .step-active { background: #1a1a2e; color: white; }
+  .step-done { background: #22c55e; color: white; }
+  .step-inactive { background: #f3f4f6; color: #aaa; }
+  .step-line { flex: 1; height: 2px; background: #eee; }
+  .step-line-done { background: #22c55e; }
+  .back-btn { background: none; border: none; color: #aaa; font-size: 13px; margin-bottom: 16px; padding: 0; display: flex; align-items: center; gap: 4px; }
+
+  /* Main app */
+  .main-app { padding-bottom: 88px; }
+  .header { background: white; padding: 14px 20px 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+  .header-left { display: flex; flex-direction: column; }
+  .header-title { font-size: 17px; font-weight: 700; color: #1a1a2e; }
+  .header-room { font-size: 10px; color: #aaa; margin-top: 1px; }
+  .header-sync { font-size: 10px; margin-top: 1px; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+  .settle-btn { background: #1a1a2e; color: white; border: none; border-radius: 10px; padding: 7px 16px; font-size: 13px; font-weight: 600; }
+  .settle-btn-urgent { background: #ef4444; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.75} }
+  .switch-btn { background: #f3f4f6; color: #666; border: none; border-radius: 10px; padding: 7px 12px; font-size: 12px; }
+
+  .alert-banner { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 14px; margin: 12px 16px 0; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .alert-text { font-size: 13px; color: #dc2626; font-weight: 600; }
+  .alert-sub { font-size: 11px; color: #ef4444; margin-top: 2px; }
+  .score-card { background: white; border-radius: 20px; padding: 20px; margin: 16px 16px 0; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .score-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .player { text-align: center; flex: 1; }
+  .player-score { font-weight: 800; font-size: 24px; margin: 6px 0 2px; }
+  .player-name { font-size: 12px; color: #888; }
+  .diff-center { text-align: center; flex: 1; }
+  .diff-label { font-size: 11px; color: #bbb; margin-bottom: 4px; }
+  .bar-bg { border-radius: 99px; height: 10px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+  .bar-pct { display: flex; justify-content: space-between; margin-top: 5px; }
+  .tasks-header { display: flex; justify-content: space-between; align-items: center; margin: 16px 20px 10px; }
+  .tasks-title { font-size: 14px; font-weight: 700; color: #333; }
+  .add-btn-sm { background: none; border: none; color: #4F8EF7; font-size: 13px; font-weight: 600; }
+  .tasks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+  .task-card { background: white; border-radius: 16px; padding: 14px 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .task-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .task-pts { background: #f0f4ff; color: #4F8EF7; border-radius: 6px; padding: 2px 7px; font-size: 11px; font-weight: 700; }
+  .task-name { font-size: 13px; font-weight: 600; color: #222; margin-bottom: 10px; }
+  .task-btns { display: flex; gap: 6px; }
+  .task-btn { flex: 1; border: none; border-radius: 8px; padding: 6px 0; font-size: 16px; }
+  .task-btn:active { transform: scale(0.92); }
+  .nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #1a1a2e; border-radius: 20px 20px 0 0; display: flex; padding: 12px 0 24px; }
+  .nav-btn { flex: 1; background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .nav-dot { width: 20px; height: 3px; background: #4F8EF7; border-radius: 99px; margin-top: 2px; }
+  .page { padding: 16px; }
+  .page-title { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 14px; }
+  .record-item { background: white; border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .record-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+  .record-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .record-pts { border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 700; }
+  .btn-x { background: none; border: none; color: #ddd; font-size: 18px; padding: 4px 6px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .stat-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .stat-label { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+  .stat-val { font-size: 22px; font-weight: 800; }
+  .profile-section { background: white; border-radius: 20px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .section-label { font-size: 11px; font-weight: 700; color: #aaa; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .profile-row { display: flex; gap: 12px; }
+  .profile-player { flex: 1; background: #f8f9ff; border-radius: 14px; padding: 14px 12px; text-align: center; }
+  .profile-avatar-btn { font-size: 36px; background: none; border: 2px dashed #e0e0e0; border-radius: 12px; padding: 6px 12px; width: 100%; margin-bottom: 8px; }
+  .profile-name-input { width: 100%; border: 1.5px solid #eee; border-radius: 8px; padding: 6px 10px; font-size: 13px; font-weight: 600; text-align: center; background: white; }
+  .profile-save-btn { width: 100%; background: #1a1a2e; color: white; border: none; border-radius: 12px; padding: 12px 0; font-size: 14px; font-weight: 700; margin-top: 14px; }
+  .room-info-card { background: white; border-radius: 16px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .room-info-row { display: flex; justify-content: space-between; align-items: center; }
+  .room-info-code { font-size: 20px; font-weight: 800; color: #4F8EF7; letter-spacing: 2px; }
+  .copy-btn { background: #f0f4ff; color: #4F8EF7; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; }
+  .settings-item { background: white; border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .settings-row { display: flex; justify-content: space-between; align-items: center; }
+  .settings-left { display: flex; align-items: center; gap: 10px; }
+  .btn-edit { background: #f0f4ff; border: none; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #4F8EF7; }
+  .btn-del { background: #fff0f3; border: none; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #F7598E; }
+  .btn-save-sm { background: #4F8EF7; color: white; border: none; border-radius: 8px; padding: 5px 12px; font-size: 12px; }
+  .btn-cancel-sm { background: #f3f4f6; border: none; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: #666; }
+  .edit-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ei-sm { width: 40px; border: 1px solid #eee; border-radius: 8px; padding: 4px; font-size: 16px; text-align: center; }
+  .ei-md { flex: 1; border: 1px solid #eee; border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+  .ei-num { width: 60px; border: 1px solid #eee; border-radius: 8px; padding: 4px 8px; font-size: 13px; }
+  .add-task-btn { width: 100%; background: rgba(79,142,247,0.08); border: 2px dashed rgba(79,142,247,0.3); border-radius: 14px; padding: 14px 0; font-size: 14px; color: #4F8EF7; font-weight: 600; margin-top: 6px; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: white; border-radius: 24px; padding: 28px; width: 300px; text-align: center; }
+  .modal-emoji { font-size: 40px; margin-bottom: 12px; }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .modal-sub { font-size: 13px; color: #888; margin-bottom: 6px; }
+  .modal-diff { font-size: 14px; font-weight: 600; margin-bottom: 20px; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-cancel { flex: 1; background: #f3f4f6; border: none; border-radius: 12px; padding: 12px 0; font-size: 14px; }
+  .modal-confirm { flex: 1; background: #1a1a2e; color: white; border: none; border-radius: 12px; padding: 12px 0; font-size: 14px; font-weight: 700; }
+  .modal-confirm-red { background: #ef4444; }
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .sheet { background: white; border-radius: 24px 24px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 480px; }
+  .emoji-picker-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 200; }
+  .emoji-picker { background: white; border-radius: 24px 24px 0 0; padding: 20px 16px 40px; width: 100%; max-width: 480px; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 12px; }
+  .emoji-opt { font-size: 28px; background: none; border: none; border-radius: 10px; padding: 6px; }
+  .flash { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: white; border-radius: 12px; padding: 10px 22px; font-size: 14px; font-weight: 600; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.3); animation: pop 1.5s ease forwards; pointer-events: none; white-space: nowrap; }
+  @keyframes pop { 0%{opacity:0;transform:translateX(-50%) translateY(-8px)} 20%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
+  .empty { text-align: center; color: #bbb; padding: 60px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, push, remove, onValue, off } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyANFFYc-IZe1Fy_DA30pjUwCcj79l0PY3U",
+  authDomain: "family-chores-7207b.firebaseapp.com",
+  databaseURL: "https://family-chores-7207b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "family-chores-7207b",
+  storageBucket: "family-chores-7207b.firebasestorage.app",
+  messagingSenderId: "845659762793",
+  appId: "1:845659762793:web:14eab09e7644fee1f232f8"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
+const ALERT_THRESHOLD = 700;
+const AVATARS = ["🧑","👩","🧔","👱","🧑‍🦰","👩‍🦰","🧑‍🦱","👩‍🦱","🧑‍🦳","👩‍🦳","🧑‍💼","👩‍💼","🧑‍🍳","👩‍🍳","🧑‍🎨","👩‍🎨","🧑‍🚀","👩‍🚀","🦸","🦸‍♀️","🧙","🧙‍♀️","🐱","🐶","🐼","🦊","🐨","🐸","🌸","🦋","⭐","🎯"];
+
+const DEFAULT_TASKS = [
+  { id: 1, emoji: "🗑️", name: "餐桌角落垃圾", points: 120 },
+  { id: 2, emoji: "🛁", name: "清洗浴室", points: 30 },
+  { id: 3, emoji: "✅", name: "解决需求", points: 50 },
+  { id: 4, emoji: "📦", name: "垃圾拿出", points: 35 },
+  { id: 5, emoji: "💰", name: "算账", points: 5 },
+  { id: 6, emoji: "🧹", name: "扫地拖地", points: 80 },
+  { id: 7, emoji: "🍳", name: "做饭", points: 100 },
+  { id: 8, emoji: "🧺", name: "洗衣服", points: 60 },
+  { id: 9, emoji: "🛒", name: "买菜采购", points: 75 },
+  { id: 10, emoji: "🪴", name: "浇花", points: 15 },
+];
+
+function generateCode() {
+  const w = ["home","nest","cozy","team","duo","pair","star","sun","moon","leaf","zen","cool"];
+  return w[Math.floor(Math.random()*w.length)] + Math.floor(100+Math.random()*900);
+}
+
+// Simple hash for password (not cryptographic, but good enough for this use case)
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,16);
+}
+
+let roomCode = localStorage.getItem("roomCode") || null;
+let sessionAuth = sessionStorage.getItem("roomAuth") || null; // auth token valid for this session
+
+let state = {
+  // screens: "welcome" | "create-pw" | "enter-pw" | "app"
+  screen: "welcome",
+  step: 1, // 1=room code, 2=password
+  roomInput: "",
+  pwInput: "",
+  pw2Input: "",
+  pwVisible: false,
+  pwError: "",
+  isNewRoom: false, // true if creating new room
+  tab: "dashboard",
+  scoreA: 0, scoreB: 0,
+  records: [],
+  tasks: DEFAULT_TASKS,
+  players: { a: { name: "老公", avatar: "🧑", color: "#4F8EF7" }, b: { name: "小仙女", avatar: "👸", color: "#F7598E" } },
+  sync: "connecting",
+  showSettle: false,
+  showAdd: false,
+  editTask: null,
+  newTask: { emoji: "✨", name: "", points: 0 },
+  deleteConfirm: null,
+  showEmojiPicker: null,
+  editPlayers: null,
+};
+
+// Check URL param
+const urlRoom = new URLSearchParams(location.search).get("room");
+if (urlRoom) {
+  state.roomInput = urlRoom;
+  state.step = 1;
+}
+
+// If we have saved room + session auth, go straight to app
+if (roomCode && sessionAuth) {
+  state.screen = "app";
+  state.sync = "connecting";
+}
+
+function fmt(ts) {
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+function setState(patch) { state = {...state, ...patch}; render(); }
+function showFlash(text) {
+  document.querySelectorAll(".flash").forEach(e=>e.remove());
+  const el = document.createElement("div");
+  el.className="flash"; el.textContent=text;
+  document.getElementById("app").appendChild(el);
+  setTimeout(()=>el.remove(), 1500);
+}
+
+function dbPath(sub) { return `rooms/${roomCode}/${sub}`; }
+
+function attachListener() {
+  onValue(ref(db, `rooms/${roomCode}`), (snap) => {
+    const data = snap.val();
+    if (data) {
+      const records = data.records
+        ? Object.entries(data.records).map(([key,val])=>({key,...val})).sort((a,b)=>b.ts-a.ts)
+        : [];
+      setState({ scoreA: data.scoreA??0, scoreB: data.scoreB??0, tasks: data.tasks||DEFAULT_TASKS, players: data.players||state.players, records, sync: "synced" });
+    } else {
+      set(ref(db,`rooms/${roomCode}`), { scoreA:0, scoreB:0, tasks:DEFAULT_TASKS, players:state.players, passwordHash:"" });
+      setState({ sync:"synced" });
+    }
+  }, ()=>setState({sync:"error"}));
+}
+
+// Step 1: check if room exists, then go to step 2
+async function proceedToPassword() {
+  const code = (state.roomInput||"").trim().toLowerCase().replace(/\s+/g,"");
+  if (!code) { setState({ pwError: "请输入房间码" }); return; }
+  setState({ pwError: "", sync: "connecting" });
+  try {
+    const snap = await get(ref(db, `rooms/${code}/passwordHash`));
+    const isNew = !snap.exists() || !snap.val();
+    roomCode = code;
+    setState({ step: 2, isNewRoom: isNew, pwInput: "", pw2Input: "", pwError: "", sync: "synced" });
+  } catch {
+    setState({ pwError: "网络错误，请重试", sync: "error" });
+  }
+}
+
+// Step 2: verify or create password
+async function submitPassword() {
+  const pw = state.pwInput.trim();
+  if (!pw) { setState({ pwError: "请输入密码" }); return; }
+  if (state.isNewRoom) {
+    if (pw.length < 4) { setState({ pwError: "密码至少4位" }); return; }
+    if (pw !== state.pw2Input.trim()) { setState({ pwError: "两次密码不一致" }); return; }
+    // Create room with password
+    const hash = await hashPassword(pw);
+    await set(ref(db, `rooms/${roomCode}/passwordHash`), hash);
+    sessionStorage.setItem("roomAuth", hash);
+    sessionAuth = hash;
+    localStorage.setItem("roomCode", roomCode);
+    setState({ screen: "app", sync: "connecting" });
+    attachListener();
+  } else {
+    // Verify password
+    setState({ pwError: "" });
+    try {
+      const snap = await get(ref(db, `rooms/${roomCode}/passwordHash`));
+      const stored = snap.val();
+      const hash = await hashPassword(pw);
+      if (hash === stored) {
+        sessionStorage.setItem("roomAuth", hash);
+        sessionAuth = hash;
+        localStorage.setItem("roomCode", roomCode);
+        setState({ screen: "app", sync: "connecting" });
+        attachListener();
+      } else {
+        setState({ pwError: "密码错误，请重试" });
+      }
+    } catch {
+      setState({ pwError: "网络错误，请重试" });
+    }
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem("roomAuth");
+  localStorage.removeItem("roomCode");
+  sessionAuth = null; roomCode = null;
+  setState({ screen: "welcome", step: 1, roomInput: "", pwInput: "", pw2Input: "", pwError: "", isNewRoom: false });
+}
+
+if (roomCode && sessionAuth) attachListener();
+
+async function doTask(pid, task) {
+  const {scoreA,scoreB,players} = state;
+  const nA = pid==="a"?scoreA+task.points:scoreA;
+  const nB = pid==="b"?scoreB+task.points:scoreB;
+  const p = players[pid];
+  showFlash(`+${task.points} 分 ✨`);
+  const rec = {player:p.name,playerEmoji:p.avatar,task:task.name,taskEmoji:task.emoji,points:task.points,ts:Date.now()};
+  try { await set(ref(db,dbPath("scoreA")),nA); await set(ref(db,dbPath("scoreB")),nB); await push(ref(db,dbPath("records")),rec); }
+  catch { setState({sync:"error"}); }
+}
+
+async function doSettle() {
+  const {scoreA,scoreB} = state;
+  const diff = scoreA-scoreB;
+  const rec = {player:"结算",playerEmoji:"💳",task:`结算 差额${diff>=0?"+":""}${diff}分`,taskEmoji:"🏁",points:0,ts:Date.now(),isSettle:true};
+  setState({showSettle:false});
+  try { await set(ref(db,dbPath("scoreA")),0); await set(ref(db,dbPath("scoreB")),0); await push(ref(db,dbPath("records")),rec); }
+  catch { setState({sync:"error"}); }
+}
+
+async function deleteRecord(key,record) {
+  const {scoreA,scoreB,players} = state;
+  let nA=scoreA,nB=scoreB;
+  if (!record.isSettle) {
+    if (record.player===players.a.name) nA=Math.max(0,scoreA-record.points);
+    if (record.player===players.b.name) nB=Math.max(0,scoreB-record.points);
+  }
+  setState({deleteConfirm:null});
+  try { await remove(ref(db,`rooms/${roomCode}/records/${key}`)); await set(ref(db,dbPath("scoreA")),nA); await set(ref(db,dbPath("scoreB")),nB); showFlash("已删除 🗑️"); }
+  catch { setState({sync:"error"}); }
+}
+
+async function savePlayers(p) {
+  setState({players:p,editPlayers:null,showEmojiPicker:null});
+  try { await set(ref(db,dbPath("players")),p); showFlash("已保存 ✅"); } catch {}
+}
+
+async function saveTasks(tasks) {
+  setState({tasks});
+  try { await set(ref(db,dbPath("tasks")),tasks); } catch {}
+}
+
+function copyRoom() {
+  const url = `${location.origin}${location.pathname}?room=${roomCode}`;
+  navigator.clipboard.writeText(url).then(()=>showFlash("链接已复制 📋")).catch(()=>showFlash("房间码："+roomCode));
+}
+
+function render() {
+  const {screen,step,roomInput,pwInput,pw2Input,pwVisible,pwError,isNewRoom,tab,scoreA,scoreB,records,tasks,players,sync,showSettle,showAdd,editTask,newTask,deleteConfirm,showEmojiPicker,editPlayers} = state;
+  const PA=players.a, PB=players.b;
+  const ep = editPlayers||{a:{...PA},b:{...PB}};
+
+  // ── WELCOME / ROOM ENTRY ──
+  if (screen==="welcome") {
+    document.getElementById("app").innerHTML = `
+      <div class="welcome">
+        <div class="welcome-logo">🏠</div>
+        <div class="welcome-title">家务合伙人</div>
+        <div class="welcome-sub">两个人，一起记录家务<br/>输入房间码和密码开始</div>
+        <div class="room-card">
+          <div class="steps">
+            <div class="step ${step>=1?'step-active':'step-inactive'}">1</div>
+            <div class="step-line ${step>=2?'step-line-done':''}"></div>
+            <div class="step ${step>=2?'step-active':'step-inactive'}">2</div>
+          </div>
+
+          ${step===1 ? `
+            <div class="room-card-title">输入房间码</div>
+            <div class="room-card-sub">第一次使用会自动创建你的专属房间</div>
+            ${urlRoom ? `<div class="url-banner"><span class="url-banner-label">来自分享链接</span><span class="url-banner-code">${urlRoom}</span></div>` : ""}
+            <div class="field-label">房间码</div>
+            <div class="field-wrap">
+              <input class="field-input ${pwError?'error':''}" id="room-inp" placeholder="如 vera2024 或 自动生成" value="${roomInput}" oninput="window._ri(this.value)" onkeydown="if(event.key==='Enter')window._next()"/>
+            </div>
+            ${pwError ? `<div class="field-error">${pwError}</div>` : ""}
+            <button class="main-btn" onclick="window._next()" style="margin-top:6px">下一步 →</button>
+            <div class="divider"><div class="divider-line"></div><div class="divider-text">或者</div><div class="divider-line"></div></div>
+            <button class="secondary-btn" onclick="window._gen()">✨ 自动生成房间码</button>
+            <div class="hint-text">房间码是你和伴侣的专属空间<br/>两人输入同一个码即可同步</div>
+          ` : `
+            <button class="back-btn" onclick="window._back()">← 返回</button>
+            <div class="room-card-title">${isNewRoom ? "🆕 新房间，设置密码" : "🔐 输入密码"}</div>
+            <div class="room-card-sub">房间码：<strong>${roomCode}</strong> ${isNewRoom?"（全新房间）":"（已存在）"}</div>
+            <div class="field-label">密码</div>
+            <div class="field-wrap">
+              <input class="field-input ${pwError?'error':''}" id="pw-inp" type="${pwVisible?'text':'password'}" placeholder="${isNewRoom?'设置密码（至少4位）':'输入密码'}" value="${pwInput}" oninput="window._pi(this.value)" onkeydown="if(event.key==='Enter')${isNewRoom?'document.getElementById(\'pw2-inp\')?.focus()':'window._submit()'}"/>
+              <button class="pw-toggle" onclick="window._togglePw()">${pwVisible?"🙈":"👁️"}</button>
+            </div>
+            ${isNewRoom ? `
+              <div class="field-label">确认密码</div>
+              <div class="field-wrap">
+                <input class="field-input" id="pw2-inp" type="${pwVisible?'text':'password'}" placeholder="再输一次" value="${pw2Input}" oninput="window._p2i(this.value)" onkeydown="if(event.key==='Enter')window._submit()"/>
+              </div>
+            ` : ""}
+            ${pwError ? `<div class="field-error" style="margin-bottom:10px">${pwError}</div>` : ""}
+            <button class="main-btn" onclick="window._submit()" style="margin-top:${pwError?'0':'6px'}">${isNewRoom?"创建房间 🎉":"进入房间 →"}</button>
+            ${isNewRoom ? `<div class="hint-text">密码用于保护你的房间<br/>伴侣加入时需要输入同一个密码</div>` : `<div class="hint-text">忘记密码？联系创建房间的人</div>`}
+          `}
+        </div>
+      </div>
+    `;
+    setTimeout(()=>{
+      if (step===1) document.getElementById("room-inp")?.focus();
+      else document.getElementById("pw-inp")?.focus();
+    },100);
+    return;
+  }
+
+  // ── MAIN APP ──
+  const total=scoreA+scoreB||1, pctA=(scoreA/total)*100;
+  const diff=scoreA-scoreB, absDiff=Math.abs(diff), isUrgent=absDiff>=ALERT_THRESHOLD;
+  const aheadName=diff>0?PA.name:PB.name, behindName=diff>0?PB.name:PA.name;
+  const syncColor=sync==="synced"?"#22c55e":sync==="error"?"#ef4444":"#f59e0b";
+  const syncText=sync==="synced"?"已同步 ☁️":sync==="error"?"同步失败":"连接中...";
+  const aRecs=records.filter(r=>r.player===PA.name&&!r.isSettle);
+  const bRecs=records.filter(r=>r.player===PB.name&&!r.isSettle);
+  const taskCounts={};
+  records.filter(r=>!r.isSettle).forEach(r=>{taskCounts[r.task]=(taskCounts[r.task]||0)+1;});
+  const top=Object.entries(taskCounts).sort((a,b)=>b[1]-a[1])[0];
+  const NAV=[{id:"dashboard",label:"看板",e:"📊"},{id:"records",label:"流水",e:"📋"},{id:"stats",label:"统计",e:"📈"},{id:"settings",label:"设置",e:"⚙️"}];
+
+  document.getElementById("app").innerHTML = `
+    <div class="main-app">
+      <div class="header">
+        <div class="header-left">
+          <div class="header-title">家务合伙人</div>
+          <div class="header-room">🏠 ${roomCode}</div>
+          <div class="header-sync" style="color:${syncColor}">● ${syncText}</div>
+        </div>
+        <div class="header-right">
+          <button class="switch-btn" onclick="window._logout()">退出</button>
+          <button class="settle-btn ${isUrgent?'settle-btn-urgent':''}" onclick="window._settle()">${isUrgent?"⚠️ 结算":"结算"}</button>
+        </div>
+      </div>
+
+      ${tab==="dashboard"?`
+        ${isUrgent?`<div class="alert-banner"><span style="font-size:22px">⚠️</span><div><div class="alert-text">差额已达 ${absDiff} 分，该结算啦！</div><div class="alert-sub">${aheadName} 多做了不少，${behindName} 欠一顿好饭 😄</div></div></div>`:""}
+        <div class="score-card" style="margin-top:16px">
+          <div class="score-row">
+            <div class="player"><div style="font-size:34px">${PA.avatar}</div><div class="player-score" style="color:${PA.color}">${scoreA}</div><div class="player-name">${PA.name}</div></div>
+            <div class="diff-center"><div class="diff-label">分工占比</div><div style="font-size:14px;font-weight:700;color:${isUrgent?'#ef4444':'#333'}">${diff===0?"势均力敌":diff>0?`领先 +${diff}`:`落后 ${diff}`}</div></div>
+            <div class="player"><div style="font-size:34px">${PB.avatar}</div><div class="player-score" style="color:${PB.color}">${scoreB}</div><div class="player-name">${PB.name}</div></div>
+          </div>
+          <div class="bar-bg" style="background:${PB.color}"><div class="bar-fill" style="width:${pctA}%;background:${PA.color}"></div></div>
+          <div class="bar-pct"><span style="font-size:11px;color:${PA.color};font-weight:600">${Math.round(pctA)}%</span><span style="font-size:11px;color:${PB.color};font-weight:600">${Math.round(100-pctA)}%</span></div>
+        </div>
+        <div class="tasks-header"><div class="tasks-title">点选任务</div><button class="add-btn-sm" onclick="window._showAdd()">+ 添加</button></div>
+        <div class="tasks-grid">
+          ${tasks.map((t,i)=>`
+            <div class="task-card">
+              <div class="task-top"><span style="font-size:22px">${t.emoji}</span><span class="task-pts">+${t.points}</span></div>
+              <div class="task-name">${t.name}</div>
+              <div class="task-btns">
+                <button class="task-btn" style="background:${PA.color}18" onclick="window._doTask('a',${i})">${PA.avatar}</button>
+                <button class="task-btn" style="background:${PB.color}18" onclick="window._doTask('b',${i})">${PB.avatar}</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `:""}
+
+      ${tab==="records"?`
+        <div class="page">
+          <div class="page-title">流水记录 <span style="font-size:11px;color:#aaa;font-weight:400">（× 可撤销）</span></div>
+          ${records.length===0?'<div class="empty">暂无记录</div>':records.map(r=>`
+            <div class="record-item" style="${r.isSettle?"background:#fffbeb;border-left:3px solid #f59e0b":""}">
+              <div class="record-left"><span style="font-size:24px">${r.taskEmoji}</span><div><div style="font-size:13px;font-weight:600;color:#222">${r.task}</div><div style="font-size:11px;color:#aaa;margin-top:2px">${r.playerEmoji} ${r.player} · ${fmt(r.ts)}</div></div></div>
+              <div class="record-right">${!r.isSettle?`<span class="record-pts" style="background:${r.player===PA.name?PA.color+"18":PB.color+"18"};color:${r.player===PA.name?PA.color:PB.color}">+${r.points}</span>`:""}<button class="btn-x" onclick="window._confirmDelete('${r.key}')">×</button></div>
+            </div>
+          `).join("")}
+        </div>
+      `:""}
+
+      ${tab==="stats"?`
+        <div class="page">
+          <div class="page-title">统计看板</div>
+          <div class="stat-grid">
+            ${[{l:PA.name+" 完成",v:aRecs.length+" 次",c:PA.color},{l:PB.name+" 完成",v:bRecs.length+" 次",c:PB.color},{l:PA.name+" 总分",v:scoreA+" 分",c:PA.color},{l:PB.name+" 总分",v:scoreB+" 分",c:PB.color}].map(s=>`<div class="stat-card"><div class="stat-label">${s.l}</div><div class="stat-val" style="color:${s.c}">${s.v}</div></div>`).join("")}
+          </div>
+          ${top?`<div class="stat-card"><div class="stat-label">最常完成任务</div><div style="font-size:16px;font-weight:700;margin-top:4px">🏆 ${top[0]}</div><div style="font-size:12px;color:#888;margin-top:4px">共完成 ${top[1]} 次</div></div>`:""}
+        </div>
+      `:""}
+
+      ${tab==="settings"?`
+        <div class="page">
+          <div class="room-info-card">
+            <div class="section-label">🏠 你的房间</div>
+            <div class="room-info-row">
+              <div class="room-info-code">${roomCode}</div>
+              <button class="copy-btn" onclick="window._copyRoom()">复制邀请链接</button>
+            </div>
+            <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.5">把链接发给伴侣，对方打开输入相同密码即可加入 🔐</div>
+          </div>
+          <div class="profile-section">
+            <div class="section-label">👥 人物设置</div>
+            <div class="profile-row">
+              ${["a","b"].map(pid=>`
+                <div class="profile-player">
+                  <button class="profile-avatar-btn" onclick="window._openEmoji('${pid}')">${ep[pid].avatar}</button>
+                  <input class="profile-name-input" value="${ep[pid].name}" oninput="window._epName('${pid}',this.value)" style="border-color:${pid==='a'?'#4F8EF7':'#F7598E'}20"/>
+                  <div style="font-size:10px;color:#bbb;margin-top:6px">点头像换表情</div>
+                </div>
+              `).join("")}
+            </div>
+            <button class="profile-save-btn" onclick="window._savePlayers()">保存设置</button>
+          </div>
+          <div class="section-label" style="margin-bottom:10px">📋 任务管理</div>
+          ${tasks.map((t,i)=>`
+            <div class="settings-item">
+              ${editTask?.id===t.id?`
+                <div class="edit-row">
+                  <input class="ei-sm" value="${editTask.emoji}" oninput="window._ef('emoji',this.value)"/>
+                  <input class="ei-md" value="${editTask.name}" oninput="window._ef('name',this.value)"/>
+                  <input type="number" class="ei-num" value="${editTask.points}" oninput="window._ef('points',Number(this.value))"/>
+                  <button class="btn-save-sm" onclick="window._saveEdit()">保存</button>
+                  <button class="btn-cancel-sm" onclick="window._cancelEdit()">取消</button>
+                </div>
+              `:`
+                <div class="settings-row">
+                  <div class="settings-left"><span style="font-size:22px">${t.emoji}</span><div><div style="font-size:13px;font-weight:600;color:#222">${t.name}</div><div style="font-size:11px;color:#4F8EF7;font-weight:600">+${t.points} 分</div></div></div>
+                  <div style="display:flex;gap:6px"><button class="btn-edit" onclick="window._startEdit(${i})">编辑</button><button class="btn-del" onclick="window._delTask(${i})">删除</button></div>
+                </div>
+              `}
+            </div>
+          `).join("")}
+          <button class="add-task-btn" onclick="window._showAdd()">+ 添加新任务</button>
+        </div>
+      `:""}
+
+      <nav class="nav">
+        ${NAV.map(n=>`
+          <button class="nav-btn" style="opacity:${tab===n.id?1:0.4}" onclick="window._setTab('${n.id}')">
+            <span style="font-size:20px">${n.e}</span>
+            <span style="font-size:11px;color:${tab===n.id?"#fff":"#aaa"};font-weight:${tab===n.id?700:400}">${n.label}</span>
+            ${tab===n.id?'<div class="nav-dot"></div>':""}
+          </button>
+        `).join("")}
+      </nav>
+    </div>
+
+    ${showSettle?`<div class="modal-bg" onclick="if(event.target===this)window._closeSettle()"><div class="modal"><div class="modal-emoji">${isUrgent?"⚠️":"💳"}</div><div class="modal-title">确认结算？</div><div class="modal-sub">${PA.name}: ${scoreA} 分 · ${PB.name}: ${scoreB} 分</div><div class="modal-diff" style="color:${diff>0?PA.color:diff<0?PB.color:"#888"}">${diff===0?"两人势均力敌 🎉":diff>0?`${PA.name} 多贡献 ${diff} 分`:`${PB.name} 多贡献 ${Math.abs(diff)} 分`}</div><div class="modal-btns"><button class="modal-cancel" onclick="window._closeSettle()">取消</button><button class="modal-confirm" onclick="window._confirmSettle()">结算清零</button></div></div></div>`:""}
+
+    ${deleteConfirm?`<div class="modal-bg" onclick="if(event.target===this)window._cancelDelete()"><div class="modal"><div class="modal-emoji">🗑️</div><div class="modal-title">删除这条记录？</div><div class="modal-sub">${deleteConfirm.record.taskEmoji} ${deleteConfirm.record.task}</div><div class="modal-diff" style="color:#888;font-size:12px;margin-bottom:20px">${!deleteConfirm.record.isSettle?`积分将自动回退 −${deleteConfirm.record.points} 分`:"结算记录将被删除"}</div><div class="modal-btns"><button class="modal-cancel" onclick="window._cancelDelete()">取消</button><button class="modal-confirm modal-confirm-red" onclick="window._doDelete()">确认删除</button></div></div></div>`:""}
+
+    ${showEmojiPicker?`<div class="emoji-picker-bg" onclick="if(event.target===this)window._closeEmoji()"><div class="emoji-picker"><div style="font-size:14px;font-weight:700;color:#333">选择头像</div><div class="emoji-grid">${AVATARS.map(e=>`<button class="emoji-opt" onclick="window._pickEmoji('${showEmojiPicker}','${e}')">${e}</button>`).join("")}</div></div></div>`:""}
+
+    ${showAdd?`<div class="sheet-bg" onclick="if(event.target===this)window._closeAdd()"><div class="sheet"><div style="font-size:16px;font-weight:700;margin-bottom:18px">添加新任务</div><div style="display:flex;gap:10px;margin-bottom:14px"><input value="${newTask.emoji}" oninput="window._nf('emoji',this.value)" style="width:54px;border:1.5px solid #eee;border-radius:12px;padding:10px 8px;font-size:18px;text-align:center"/><input placeholder="任务名称" value="${newTask.name}" oninput="window._nf('name',this.value)" style="flex:1;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:14px"/></div><div style="display:flex;align-items:center;gap:10px;margin-bottom:20px"><span style="font-size:13px;color:#888">点数</span><input type="number" value="${newTask.points}" oninput="window._nf('points',Number(this.value))" style="width:90px;border:1.5px solid #eee;border-radius:12px;padding:10px 14px;font-size:14px"/></div><div class="modal-btns"><button class="modal-cancel" onclick="window._closeAdd()">取消</button><button class="modal-confirm" onclick="window._addTask()">添加</button></div></div></div>`:""}
+  `;
+}
+
+// Handlers
+window._ri = v => { state.roomInput=v; };
+window._pi = v => { state.pwInput=v; };
+window._p2i = v => { state.pw2Input=v; };
+window._togglePw = () => setState({pwVisible:!state.pwVisible});
+window._gen = () => setState({roomInput:generateCode()});
+window._next = () => proceedToPassword();
+window._back = () => setState({step:1,pwError:"",pwInput:"",pw2Input:""});
+window._submit = () => submitPassword();
+window._logout = () => logout();
+window._setTab = t => setState({tab:t});
+window._settle = () => setState({showSettle:true});
+window._closeSettle = () => setState({showSettle:false});
+window._confirmSettle = () => doSettle();
+window._showAdd = () => setState({showAdd:true});
+window._closeAdd = () => setState({showAdd:false,newTask:{emoji:"✨",name:"",points:0}});
+window._doTask = (pid,idx) => doTask(pid,state.tasks[idx]);
+window._startEdit = i => setState({editTask:{...state.tasks[i]}});
+window._cancelEdit = () => setState({editTask:null});
+window._ef = (k,v) => { state.editTask={...state.editTask,[k]:v}; };
+window._saveEdit = () => { saveTasks(state.tasks.map(t=>t.id===state.editTask.id?state.editTask:t)); setState({editTask:null}); };
+window._delTask = i => saveTasks(state.tasks.filter((_,idx)=>idx!==i));
+window._nf = (k,v) => { state.newTask={...state.newTask,[k]:v}; };
+window._addTask = () => { if(!state.newTask.name.trim())return; saveTasks([...state.tasks,{id:Date.now(),...state.newTask}]); setState({showAdd:false,newTask:{emoji:"✨",name:"",points:0}}); };
+window._confirmDelete = key => { const r=state.records.find(r=>r.key===key); if(r)setState({deleteConfirm:{key,record:r}}); };
+window._cancelDelete = () => setState({deleteConfirm:null});
+window._doDelete = () => { if(state.deleteConfirm)deleteRecord(state.deleteConfirm.key,state.deleteConfirm.record); };
+window._openEmoji = pid => setState({showEmojiPicker:pid,editPlayers:state.editPlayers||{a:{...state.players.a},b:{...state.players.b}}});
+window._closeEmoji = () => setState({showEmojiPicker:null});
+window._pickEmoji = (pid,emoji) => { state.editPlayers=state.editPlayers||{a:{...state.players.a},b:{...state.players.b}}; state.editPlayers[pid].avatar=emoji; setState({showEmojiPicker:null}); };
+window._epName = (pid,name) => { state.editPlayers=state.editPlayers||{a:{...state.players.a},b:{...state.players.b}}; state.editPlayers[pid].name=name; };
+window._savePlayers = () => { const ep=state.editPlayers||state.players; if(!ep.a.name.trim()||!ep.b.name.trim())return; savePlayers(ep); };
+window._copyRoom = () => copyRoom();
+
+render();
+</script>
+</body>
+</html>
