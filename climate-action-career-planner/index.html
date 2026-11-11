@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Climate Action & Career Planner</title>
+<style>
+:root{color-scheme:light;--ink:#192e27;--muted:#4b6257;--paper:#f5f5ed;--line:#cbd7cd;--accent:#174b39;--soft:#e5eee1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 "Instrument Sans","Segoe UI",sans-serif}
+header{background:#153c30;color:#fbfcf4;padding:46px 24px 42px}
+.wrap{max-width:1100px;margin:auto}
+h1{font:500 clamp(2.4rem,6vw,4.4rem)/1.06 "Instrument Serif",Georgia,serif;letter-spacing:-.04em;margin:0 0 16px}
+header p{max-width:610px;margin:0;color:#e0eddf}
+main{padding:24px}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:9px 15px;cursor:pointer;background:#fff;color:var(--ink)}
+button[aria-current=step],.primary{background:var(--accent);color:white;border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid #976017;outline-offset:3px}
+.layout{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(0,1fr);gap:18px;align-items:start}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:clamp(18px,3vw,32px)}
+aside.panel{background:var(--soft)}
+h2,h3{line-height:1.2;margin:0 0 12px}
+.intro,.hint,small,footer{color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0}
+label{display:grid;align-content:start;gap:5px;font-weight:600}
+label small{font-weight:400}
+textarea,select{width:100%;background:#fcfdfb;border:1px solid #a6b9ac;border-radius:7px;padding:10px;color:inherit;font:inherit}
+textarea{min-height:76px;resize:vertical}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+summary{cursor:pointer;font-weight:600}
+#preview{white-space:pre-wrap;overflow-wrap:anywhere}
+footer{font-size:.9rem;margin:24px 0}
+@media(max-width:760px){.layout{grid-template-columns:1fr}}
+@media(max-width:490px){.fields{grid-template-columns:1fr}main{padding:16px}}
+@media print{header{background:white;color:black;padding:0}header p,nav,.editor,.actions,#status,footer{display:none}.layout{display:block}aside.panel{border:0;padding:0;background:white}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Climate Action &amp; Career Planner</h1><p>Choose a climate issue you can work on locally, plan a small action, and use it to explore a career direction.</p></div></header>
+<main class="wrap">
+<nav aria-label="Planner steps"></nav>
+<div class="layout">
+<section class="panel editor" aria-labelledby="step-title">
+<h2 id="step-title" tabindex="-1"></h2><p class="intro" id="intro"></p>
+<details><summary>See a worked example</summary><p id="example"></p><button id="load">Fill this step with the example</button></details>
+<div class="fields" id="fields"></div>
+<div class="actions"><button id="back">Back</button><button class="primary" id="next">Continue</button></div>
+</section>
+<aside class="panel" aria-labelledby="plan-title">
+<h2 id="plan-title">Your plan</h2>
+<p id="preview"></p>
+<div class="actions"><button class="primary" id="download">Download plan</button><button id="print">Print</button><button id="clear">Clear draft</button></div>
+<p class="hint" id="status" role="status"></p>
+</aside>
+</div>
+<footer>Adapted from Vera He’s <i>From Climate Science to Climate Action</i> lecture (slides 22–34 and 38–50) and the XJTLU workshop (activities 1–3). The Climate Action Venn is credited to Dr. Ayana Elizabeth Johnson.</footer>
+</main>
+<script>
+"use strict";
+const steps = [
+ {title:"Find your starting point", intro:"Use the Climate Action Venn to connect what brings you joy, what you can offer, and work that needs doing. If you have a workshop keyword card, use it to jog your memory.",
+ example:"A student who enjoys mapping and interviewing wants to help commuters find shaded routes from the metro to campus.",
+ fields:[
+ ["joy","What brings you joy?","Think about activities you already choose to do.","Mapping places and talking with people"],
+ ["skill","What can you bring?","Include skills, experience, relationships or access.","Mapmaking, short interviews and a student society contact"],
+ ["need","What climate work needs doing?","Name a specific mitigation, adaptation, communication or justice gap.","Help students find shaded walking routes from the metro to campus on hot days"],
+ ["setting","Where can you act?","Pick a setting you can reach.","Campus or research",["Personal or community","Campus or research","Workplace or profession","Creative or public communication"]]
+ ]},
+ {title:"Design a message",intro:"Choose one audience and one action. Use this canvas to prepare a message or recruit people to try your project.",
+ example:"Invite students who walk from the metro to test two routes and tell you where they would want shade or a rest stop.",
+ fields:[
+ ["audience","Audience","Who specifically can you reach?","Students who walk from the metro to campus"],
+ ["frame","What matters to them?","Choose a frame they care about, such as health, cost or convenience.","A more comfortable walk that still gets them to class on time"],
+ ["barrier","Barrier to action","What currently gets in their way?","They know the shortest route but have little information about shade"],
+ ["story","Local story","Whose experience could you share, with permission?","Ask a commuter to describe the hottest stretch of their walk"],
+ ["message","One key message","Use plain language and a tone that fits your audience.","Help us find a more comfortable walk to campus on hot days"],
+ ["format","Format or channel","Where will this audience see it?","Student society group chat with a simple route map"],
+ ["ask","One action for the audience","Give people a concrete next step.","Try one route you already use and mark a stretch where you would want shade"],
+ ["evidence","Evidence and uncertainty","What supports the message? What still needs checking?","Record shade along both routes at the same time of day. Note that shade changes with time and weather."]
+ ]},
+ {title:"Plan a first action",intro:"Design a Minimum Viable Climate Action you can complete this month. Decide how you’ll learn from the result.",
+ example:"Make a draft shade map, share it with five commuters, and revise it after hearing what they found useful.",
+ fields:[
+ ["partner","Partner or collaborator","Who could help you do this?","Campus walking club"],
+ ["first","First action this month","Pick something you can finish with the resources you have.","Walk two routes, sketch a shade map and share it with five commuters"],
+ ["resources","Resources and constraints","What time, budget, access or support do you need to continue?","Two afternoons, a mapping tool and a contact who can recruit volunteers"],
+ ["measure","How will you know it helped?","Name a signal, how you will collect it, and when you will review it.","Within one week, ask five commuters if the map helped them choose a route and record their reasons"],
+ ["goal","Six-month goal","What will you try to achieve for this audience?","Pilot a shaded-route map and share feedback with campus facilities"]
+ ]},
+ {title:"Test a career direction",intro:"Turn the project into a small test of work you might want to do. Choose something you can share and someone who can give you feedback.",
+ example:"Explore urban climate adaptation by making a short map and methods note. Ask a campus planner to review both and explain how similar work is done professionally.",
+ fields:[
+ ["role","Role or work to explore","Think of a role, team or work function you’re curious about.","Urban climate adaptation planning"],
+ ["practice","Skill to practice","Which task would tell you something about whether you enjoy this work?","Map shade observations and turn commuter feedback into a planning recommendation"],
+ ["portfolio","Work sample","What can you share that shows your contribution and what you learned?","A route map with a one-page methods and feedback summary"],
+ ["reviewer","Person to ask for feedback","What will you ask them about your work or the role?","Ask a campus planner what evidence would make the map useful for an adaptation decision"],
+ ["decision","Career decision after the experiment","What evidence would help you decide what to try next?","If I enjoy field observation and analysis, compare planning and GIS roles and identify a skill to build"]
+ ]}
+];
+const storageKey = "climate-action-career-planner-v1";
+let draft = {};
+let index = 0;
+const get = id => document.getElementById(id);
+try {
+ const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+ if (saved && typeof saved === "object" && !Array.isArray(saved)) draft = saved;
+} catch {
+ get("status").textContent = "Browser storage is unavailable. Download your plan to keep a copy.";
+}
+const value = key => typeof draft[key] === "string" ? draft[key].trim() : "";
+function planText() {
+ const groups = steps.map(step => {
+  const lines = step.fields.filter(([key]) => value(key)).map(([key,label]) => label + ": " + value(key));
+  return lines.length ? [step.title, ...lines].join("\n") : "";
+ }).filter(Boolean);
+ if (["goal","audience","skill","measure"].every(key => value(key))) {
+  groups.push("Six-month commitment\nIn the next six months, I will try to " + value("goal").replace(/[.!?]+$/, "") + ".\nAudience: " + value("audience") + "\nWhat I’ll bring: " + value("skill") + "\nHow I’ll measure progress: " + value("measure"));
+ }
+ return groups.join("\n\n");
+}
+function refreshPlan() {
+ const plan = planText();
+ get("preview").textContent = plan || "Add a response to start your plan.";
+ get("download").disabled = !plan;
+ get("print").disabled = !plan;
+}
+function save() {
+ try {
+  localStorage.setItem(storageKey, JSON.stringify(draft));
+  get("status").textContent = "Draft saved in this browser.";
+ } catch {
+  get("status").textContent = "Browser storage is unavailable. Download your plan to keep a copy.";
+ }
+ refreshPlan();
+}
+function render(focus = true) {
+ const step = steps[index];
+ get("step-title").textContent = step.title;
+ get("intro").textContent = step.intro;
+ get("example").textContent = step.example;
+ document.querySelector("details").open = false;
+ document.querySelectorAll("nav button").forEach((button, i) => {
+  if (i === index) button.setAttribute("aria-current","step");
+  else button.removeAttribute("aria-current");
+ });
+ const fields = get("fields");
+ fields.replaceChildren();
+ for (const [key, title, hint, , options] of step.fields) {
+  const label = document.createElement("label");
+  label.append(title);
+  const help = document.createElement("small");
+  help.textContent = hint;
+  label.append(help);
+  const input = document.createElement(options ? "select" : "textarea");
+  if (options) {
+   input.add(new Option("Choose a setting",""));
+   options.forEach(option => input.add(new Option(option,option)));
+  }
+  input.value = typeof draft[key] === "string" ? draft[key] : "";
+  input.addEventListener("input", () => { draft[key] = input.value; save(); });
+  label.append(input);
+  fields.append(label);
+ }
+ get("back").disabled = index === 0;
+ get("next").hidden = index === steps.length - 1;
+ if (focus) get("step-title").focus();
+}
+steps.forEach((step, i) => {
+ const button = document.createElement("button");
+ button.textContent = step.title;
+ button.onclick = () => { index = i; render(); };
+ document.querySelector("nav").append(button);
+});
+get("next").onclick = () => { index++; render(); };
+get("back").onclick = () => { index--; render(); };
+get("load").onclick = () => {
+ const fields = steps[index].fields;
+ if (fields.some(([key]) => value(key)) && !confirm("Replace your responses for this step with the example?")) return;
+ fields.forEach(([key, , , sample]) => { draft[key] = sample; });
+ render();
+ save();
+};
+get("clear").onclick = () => {
+ if (!confirm("Clear every response in this draft?")) return;
+ draft = {};
+ index = 0;
+ render();
+ save();
+};
+get("download").onclick = () => {
+ const url = URL.createObjectURL(new Blob(["Climate Action & Career Plan\n\n",planText(),"\n"], {type:"text/plain;charset=utf-8"}));
+ const link = document.createElement("a");
+ link.href = url;
+ link.download = "climate-action-career-plan.txt";
+ link.click();
+ setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+get("print").onclick = () => window.print();
+render(false);
+refreshPlan();
+</script>
+</body>
+</html>
